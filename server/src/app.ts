@@ -3,6 +3,7 @@ import express from "express";
 import type { Pool } from "pg";
 import { sessionMiddleware } from "./auth/middleware.js";
 import { createGraphQLMiddleware } from "./graphql/server.js";
+import { importRouter } from "./imports/routes.js";
 
 export async function createApp(pool: Pool) {
   const app = express();
@@ -13,6 +14,8 @@ export async function createApp(pool: Pool) {
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
   });
+
+  app.use("/api/imports", importRouter(pool));
 
   app.use("/graphql", express.json(), await createGraphQLMiddleware(pool));
 
