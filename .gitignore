@@ -1,0 +1,17 @@
+# IDE
+.idea/
+
+# OS
+.DS_Store
+
+# Build output and dependencies
+out/
+node_modules/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
