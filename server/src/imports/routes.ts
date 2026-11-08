@@ -15,7 +15,9 @@ const upload = multer({
   limits: { fileSize: MAX_FILE_BYTES }
 });
 
-// Checked before the upload is read, so anonymous callers cannot send files
+const FILE_FIELD_MESSAGE = "Attach a CSV file in the 'file' field";
+
+// Runs before multer, so uploads from callers who may not import are never read into memory
 function requireManufacturer(req: Request, res: Response, next: NextFunction) {
   if (!req.viewer) {
     res.status(401).json({ error: "Sign in to upload devices" });
@@ -35,14 +37,14 @@ export function importRouter(pool: Pool) {
     upload.single("file"),
     async (req, res) => {
       if (!req.file) {
-        res
-          .status(400)
-          .json({ error: "Attach a CSV file in the 'file' field" });
+        res.status(400).json({ error: FILE_FIELD_MESSAGE });
         return;
       }
 
       try {
-        // The manufacturer comes from the session only, never from the request body
+        // The manufacturer comes from the session only, never from the request body.
+        // requireManufacturer has run, and the database gives every manufacturer
+        // user a manufacturer, so neither value is null here
         const result = await importDevices(
           pool,
           req.viewer!.manufacturerId!,
@@ -60,13 +62,14 @@ export function importRouter(pool: Pool) {
   );
 
   const handleUploadError: ErrorRequestHandler = (error, _req, res, next) => {
-    if (
-      error instanceof multer.MulterError &&
-      error.code === "LIMIT_FILE_SIZE"
-    ) {
-      res.status(413).json({ error: "The file is larger than 1 MiB" });
-    } else {
+    if (!(error instanceof multer.MulterError)) {
       next(error);
+    } else if (error.code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({
+        error: `The file is larger than ${MAX_FILE_BYTES / 1024 / 1024} MiB`
+      });
+    } else {
+      res.status(400).json({ error: FILE_FIELD_MESSAGE });
     }
   };
   router.use(handleUploadError);

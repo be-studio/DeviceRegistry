@@ -1,5 +1,5 @@
 import cookieParser from "cookie-parser";
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Pool } from "pg";
@@ -21,13 +21,29 @@ export async function createApp(pool: Pool, webDir?: string) {
 
   app.use("/graphql", express.json(), await createGraphQLMiddleware(pool));
 
-  // Serve the built SPA from the same origin, falling back to index.html for client-side routes
+  // Serve the built web app from the same origin. Other non-API paths get
+  // index.html so client-side routes survive a reload
   if (webDir && existsSync(webDir)) {
     app.use(express.static(webDir));
     app.get(/^(?!\/(api|graphql)(\/|$)).*/, (_req, res) => {
       res.sendFile(path.join(webDir, "index.html"));
     });
   }
+
+  // Client mistakes such as malformed JSON keep their 4xx status; anything
+  // else is logged and returned without details
+  const handleError: ErrorRequestHandler = (error, _req, res, next) => {
+    if (res.headersSent) return next(error);
+    if (error.status >= 400 && error.status < 500) {
+      res
+        .status(error.status)
+        .json({ error: error.expose ? error.message : "Bad request" });
+      return;
+    }
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  };
+  app.use(handleError);
 
   return app;
 }
