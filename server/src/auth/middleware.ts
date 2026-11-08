@@ -2,13 +2,9 @@ import type { NextFunction, Request, Response } from "express";
 import type { Pool } from "pg";
 import { findViewer, SESSION_COOKIE, type Viewer } from "./sessions.js";
 
-declare global {
-  // Express's own extension point for adding fields to Request
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      viewer: Viewer | null;
-    }
+declare module "express-serve-static-core" {
+  interface Request {
+    viewer: Viewer | null;
   }
 }
 
