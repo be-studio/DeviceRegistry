@@ -1,4 +1,4 @@
-// The server's public error codes, so pages can react to them
+// Carries the server's error code so pages can show a matching message
 export class GraphQLRequestError extends Error {
   constructor(
     message: string,

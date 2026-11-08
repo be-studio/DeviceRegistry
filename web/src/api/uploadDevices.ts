@@ -16,6 +16,8 @@ export async function uploadDevices(file: File): Promise<UploadOutcome> {
   const response = await fetch("/api/imports", { method: "POST", body: form });
   const body = await response.json().catch(() => null);
 
-  if (response.ok || response.status === 422) return body as UploadOutcome;
+  if ((response.ok || response.status === 422) && body) {
+    return body as UploadOutcome;
+  }
   throw new Error(body?.error ?? "The upload failed. Please try again.");
 }

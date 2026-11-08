@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BrowserRouter, Link, Route, Routes } from "react-router";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import { RequireRole } from "./components/RequireRole";
@@ -8,6 +9,16 @@ import { UploadPage } from "./pages/UploadPage";
 
 function Nav() {
   const { viewer, logout } = useAuth();
+  const [signOutFailed, setSignOutFailed] = useState(false);
+
+  async function handleSignOut() {
+    setSignOutFailed(false);
+    try {
+      await logout();
+    } catch {
+      setSignOutFailed(true);
+    }
+  }
 
   return (
     <nav>
@@ -18,7 +29,10 @@ function Nav() {
       {viewer ? (
         <>
           <span>{viewer.email}</span>
-          <button onClick={logout}>Sign out</button>
+          <button onClick={handleSignOut}>Sign out</button>
+          {signOutFailed && (
+            <span role="alert">Sign out failed. Please try again.</span>
+          )}
         </>
       ) : (
         <Link to="/login">Sign in</Link>

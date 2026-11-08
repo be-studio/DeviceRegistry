@@ -1,7 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { uploadDevices, type UploadOutcome } from "../api/uploadDevices";
 
+const pluralRules = new Intl.PluralRules("en-GB");
+
+function countOf(count: number, one: string, other: string) {
+  return `${count} ${pluralRules.select(count) === "one" ? one : other}`;
+}
+
 export function UploadPage() {
+  const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [outcome, setOutcome] = useState<UploadOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +22,13 @@ export function UploadPage() {
     setError(null);
     setUploading(true);
     try {
-      setOutcome(await uploadDevices(file));
+      const result = await uploadDevices(file);
+      setOutcome(result);
+      // A rejected file stays selected so it can be fixed and sent again
+      if (result.status === "accepted" && fileInput.current) {
+        fileInput.current.value = "";
+        setFile(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "The upload failed.");
     } finally {
@@ -34,6 +47,7 @@ export function UploadPage() {
         <label>
           CSV file
           <input
+            ref={fileInput}
             type="file"
             accept=".csv,text/csv"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
@@ -48,16 +62,23 @@ export function UploadPage() {
 
       {outcome?.status === "accepted" && (
         <p className="success">
-          Upload accepted: {outcome.newDevices} new devices added,{" "}
-          {outcome.skippedRows} already registered rows skipped.
+          Upload accepted:{" "}
+          {countOf(outcome.newDevices, "new device", "new devices")} added,{" "}
+          {countOf(
+            outcome.skippedRows,
+            "already registered row",
+            "already registered rows"
+          )}{" "}
+          skipped.
         </p>
       )}
 
       {outcome?.status === "rejected" && (
         <>
           <p className="error">
-            Upload rejected, nothing was saved. Fix these{" "}
-            {outcome.errors.length} problems and upload again.
+            Upload rejected, nothing was saved. Fix the{" "}
+            {countOf(outcome.errors.length, "problem", "problems")} below and
+            upload again.
           </p>
           <table>
             <thead>
