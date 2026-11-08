@@ -3,7 +3,7 @@ import type { Pool } from "pg";
 import { hashPassword } from "../auth/password.js";
 import { createPool } from "./pool.js";
 
-// Demo data only: synthetic accounts, documented in the README
+// Demo data only. The accounts are made up and listed in the README
 const manufacturers = [
   {
     name: "Aurora Devices",

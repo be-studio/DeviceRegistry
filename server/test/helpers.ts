@@ -8,7 +8,7 @@ const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ??
   "postgres://registry:registry@localhost:5433/registry_test";
 
-// Migrates the test database and starts it from the demo seed data
+// Migrates the test database, then wipes it and reloads the demo seed data
 export async function setupTestDb() {
   const pool = createPool(testDatabaseUrl);
   await runMigrations(pool);

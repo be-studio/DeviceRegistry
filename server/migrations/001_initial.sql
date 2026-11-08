@@ -20,7 +20,7 @@ CREATE TABLE sessions (
   expires_at timestamptz NOT NULL
 );
 
--- Business input: a TAC is owned by exactly one manufacturer
+-- Set by the business, not by imports: each TAC belongs to exactly one manufacturer
 CREATE TABLE tac_assignments (
   tac char(8) PRIMARY KEY CHECK (tac ~ '^\d{8}$'),
   manufacturer_id uuid NOT NULL REFERENCES manufacturers (id)

@@ -25,7 +25,8 @@ function requireAdmin(ctx: Context) {
   }
 }
 
-// Model columns shared by both lookups; a model exists only after an accepted import
+// Used by the TAC lookup and Device.model. A TAC has a model only once an
+// import for it has been accepted
 const MODEL_SELECT = `SELECT t.tac, t.brand, t.model, m.name AS "manufacturerName"
   FROM tac_models t
   JOIN tac_assignments a ON a.tac = t.tac
