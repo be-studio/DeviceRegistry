@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import request from "supertest";
 import type { Pool } from "pg";
@@ -7,12 +6,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { graphql, LOGIN, resetDb, setupTestDb } from "./helpers.js";
 
-// The supplied sample files live outside the repo
-const samplesDir =
-  process.env.SAMPLES_DIR ??
-  join(homedir(), "Desktop/device-registry-requirements/samples");
+// The five supplied sample files, kept as fixtures
+const fixturesDir = join(import.meta.dirname, "fixtures");
 
-const sample = (name: string) => readFileSync(join(samplesDir, name));
+const sample = (name: string) => readFileSync(join(fixturesDir, name));
 
 let pool: Pool;
 let app: Awaited<ReturnType<typeof createApp>>;
