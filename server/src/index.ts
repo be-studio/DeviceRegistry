@@ -1,6 +1,9 @@
 import { createApp } from "./app.js";
 import { config } from "./config.js";
+import { createPool } from "./db/pool.js";
 
-createApp().listen(config.port, () => {
+const app = await createApp(createPool());
+
+app.listen(config.port, () => {
   console.log(`Listening on http://localhost:${config.port}`);
 });
