@@ -89,17 +89,36 @@ If I carried on, the next job is two imports at the same time. The brief says to
 
 ## Time spent
 
-DRAFT, to be filled in by me.
+About 1 hour 35 minutes of building, of the 3 allowed (09:45 to 11:20, going by the commit times). I stopped building at that point because everything in the brief was working and tested, and I'd rather not add extras I haven't been asked for.
 
-Active time: [X hours Y minutes] of the 3 allowed. Stopped at: [where].
-Roughly: [setup and Docker, import, access and GraphQL, UI, tests, README].
+Roughly:
+
+- 25 minutes: setup and scaffolding
+- 10 minutes: schema, login, CSV import and both lookups, with their tests
+- 10 minutes: the React pages
+- 15 minutes: Docker and this README
+- 30 minutes: a review of the whole change, fixing what it found, then a clean run through Docker
+
+It went quickly because AI wrote most of the code (see below).
+
+### How I'm using the rest of the time
+
+1. Going through the app by hand again from an empty database, following the checklist under Tests, because the review changed some of the upload and sign-out handling.
+2. Reading the code myself so I can explain and change any part of it without AI, starting with the import (`server/src/imports/importService.ts`) and the access checks.
+3. Practising small changes by hand, such as a new validation rule with its test.
+
+I'm deliberately not spending it on locking for simultaneous imports, UI tests or styling. Those are listed as next steps under "Where I got to".
 
 ## AI usage
 
-DRAFT, I need to check this is accurate and put it in my own words.
-
-I used Claude Code for most of this. I had it write a plan first (stack, data model, import steps, test list, commit order), then build it one commit at a time from that plan: scaffold, schema and seed, login, CSV parsing, the import endpoint, the two GraphQL lookups, the React pages, and Docker with this README.
+I used Claude Code for most of this: Sonnet to build it and Opus for a final review. I had it write a plan first (stack, data model, import steps, test list, commit order), then build it one commit at a time from that plan: scaffold, schema and seed, login, CSV parsing, the import endpoint, the two GraphQL lookups, the React pages, and Docker with this README.
 
 To check the output I ran the tests (including the five sample files against the expected outcomes), ran the whole thing through Docker from an empty database, and went through the app by hand in the browser as described above. I also called the GraphQL endpoint directly to check the access rules.
 
-[Add: what I read line by line, what I changed or rejected, and anything the AI got wrong.]
+At the end I had it review the full change and check every code comment. That found real problems, which were fixed:
+
+- a failed sign-out was silent
+- upload mistakes such as a wrong form field came back as a 500 error page instead of a clear 400
+- an "OK" reply from the server that wasn't valid JSON showed a blank page
+- some type shortcuts in the import code weren't explained
+- two comments were inaccurate
