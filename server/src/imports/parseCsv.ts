@@ -11,7 +11,7 @@ export const COLUMNS = [
   "production_date",
   "purchase_order",
   "destination_country"
-];
+] as const;
 
 export const MAX_FILE_BYTES = 1024 * 1024;
 export const MAX_ROWS = 1000;
@@ -42,14 +42,16 @@ export function parseCsv(buffer: Buffer): CsvRow[] {
     throw new FileError(`The header must be exactly: ${COLUMNS.join(",")}`);
   }
 
-  const rows: CsvRow[] = [];
-  lines.forEach((text, index) => {
-    if (index === 0 || text.trim() === "") return;
-    rows.push({
-      line: index + 1,
-      values: text.split(",").map((value) => value.trim())
-    });
-  });
+  const rows: CsvRow[] = lines.flatMap((content, index) =>
+    index === 0 || content.trim() === ""
+      ? []
+      : [
+          {
+            line: index + 1,
+            values: content.split(",").map((value) => value.trim())
+          }
+        ]
+  );
 
   if (rows.length === 0) {
     throw new FileError("The file has no data rows");

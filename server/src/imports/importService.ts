@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { parseCsv } from "./parseCsv.js";
+import { COLUMNS, parseCsv } from "./parseCsv.js";
 import {
   validateRow,
   type DeviceRow,
@@ -13,6 +13,25 @@ export type ImportResult =
 interface LocatedRow {
   line: number;
   row: DeviceRow;
+}
+
+interface StoredModel {
+  tac: string;
+  brand: string;
+  model: string;
+}
+
+interface StoredDevice {
+  imei: string;
+  tac: string;
+  serial_number: string;
+  sku: string;
+  colour: string;
+  carton_serial: string;
+  pallet_serial: string;
+  production_date: string | null;
+  purchase_order: string | null;
+  destination_country: string | null;
 }
 
 const OWNERSHIP_MESSAGE = "TAC is not assigned to your account";
@@ -40,7 +59,11 @@ export async function importDevices(
     const tac = values[1] ?? "";
     // A well-formed TAC we do not own gets this error only, so nothing about
     // other manufacturers' devices can be learned from the response
-    if (values.length === 12 && /^\d{8}$/.test(tac) && !ownedTacs.has(tac)) {
+    if (
+      values.length === COLUMNS.length &&
+      /^\d{8}$/.test(tac) &&
+      !ownedTacs.has(tac)
+    ) {
       errors.push({ line, field: "tac", message: OWNERSHIP_MESSAGE });
       continue;
     }
@@ -49,7 +72,8 @@ export async function importDevices(
     if (result.row) rows.push({ line, row: result.row });
   }
 
-  // Checks within the file: one brand/model per TAC, one record per IMEI
+  // Checks within the file: each TAC has one brand/model, and a repeated IMEI
+  // must repeat the same details (it is then skipped)
   const tacModels = new Map<string, LocatedRow>();
   const devices = new Map<string, LocatedRow>();
   let skippedRows = 0;
@@ -87,13 +111,11 @@ export async function importDevices(
     await client.query("BEGIN");
 
     // Checks against the registry. Every row here is for a TAC the caller owns
-    const storedModels = await client.query(
+    const storedModels = await client.query<StoredModel>(
       "SELECT tac, brand, model FROM tac_models WHERE tac = ANY($1)",
       [[...tacModels.keys()]]
     );
-    const storedByTac = new Map<string, { brand: string; model: string }>(
-      storedModels.rows.map((r) => [r.tac, r])
-    );
+    const storedByTac = new Map(storedModels.rows.map((r) => [r.tac, r]));
     for (const { line, row } of rows) {
       const stored = storedByTac.get(row.tac);
       if (
@@ -108,7 +130,7 @@ export async function importDevices(
       }
     }
 
-    const storedDevices = await client.query(
+    const storedDevices = await client.query<StoredDevice>(
       `SELECT imei, tac, serial_number, sku, colour, carton_serial, pallet_serial,
               production_date, purchase_order, destination_country
          FROM devices WHERE imei = ANY($1)`,
@@ -164,20 +186,22 @@ async function findOwnedTacs(pool: Pool, manufacturerId: string) {
 
 // Turns a stored device back into the CSV shape so it can be compared
 function toDeviceRow(
-  r: Record<string, string | null>,
-  storedByTac: Map<string, { brand: string; model: string }>
+  r: StoredDevice,
+  storedByTac: Map<string, StoredModel>
 ): DeviceRow {
-  const model = storedByTac.get(r.tac!)!;
+  // Always found: the device's TAC is its IMEI prefix, which is a TAC in this
+  // file, and the database requires a model row for every device
+  const model = storedByTac.get(r.tac)!;
   return {
-    imei: r.imei!,
-    tac: r.tac!,
+    imei: r.imei,
+    tac: r.tac,
     brand: model.brand,
     model: model.model,
-    serialNumber: r.serial_number!,
-    sku: r.sku!,
-    colour: r.colour!,
-    cartonSerial: r.carton_serial!,
-    palletSerial: r.pallet_serial!,
+    serialNumber: r.serial_number,
+    sku: r.sku,
+    colour: r.colour,
+    cartonSerial: r.carton_serial,
+    palletSerial: r.pallet_serial,
     productionDate: r.production_date ?? "",
     purchaseOrder: r.purchase_order ?? "",
     destinationCountry: r.destination_country ?? ""
